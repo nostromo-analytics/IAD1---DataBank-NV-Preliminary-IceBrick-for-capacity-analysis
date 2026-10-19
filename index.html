@@ -222,6 +222,9 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
 
 .ib-nw-facts{grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr))}
 .ib-nw-facts .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+:root{--ib-amb:rgba(242,207,74,.5)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ib-amb:rgba(247,224,138,.5)}}
+:root[data-theme="dark"]{--ib-amb:rgba(247,224,138,.5)}
 
 .ib-meters{background:var(--color-panel);border:1px solid var(--color-border-line);border-radius:var(--cds-radius)}
 .ib-meters>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:var(--cds-pad-md) var(--cds-pad-lg)}
@@ -240,8 +243,8 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
   <div class="topbar">
     <div><div class="t">IAD1 · hourly interval data</div><div class="s">All 11 meters combined · May 10, 2024 to Aug 26, 2026 · Ambient from Dulles Airport (IAD)</div></div>
   </div>
-  <details class="ib-meters" id="ib-meters">
-    <summary><span class="ib-mt">IAD1 meter data dashboard</span><span class="ib-ms">Optional · hourly demand for all 11 meters and Dulles ambient, May 2024 to Aug 2026. Click to expand.</span></summary>
+  <details class="ib-meters" id="ib-meters" open>
+    <summary><span class="ib-mt">IAD1 meter data dashboard</span><span class="ib-ms">Hourly demand for all 11 meters and Dulles ambient, May 2024 to Aug 2026. Click to collapse.</span></summary>
 <div class="el-tab" data-kind="all">
 <div class="el">
   <header class="el-head" id="overview">
@@ -370,7 +373,7 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
       <h2 id="ib-ev-h">Facility demand with and without IceBrick, every hour</h2>
       <p class="el-note">The same dispatch across the whole period. <b class="ib-k-dis">Light blue</b> is chiller load moved off the afternoon, valued at the plant's own efficiency that hour. <b class="ib-k-eff">Pink</b> is what that move earns on top: the chillers still running sit lower on their part-load curve, and IceBrick post-cools them, so they work at a lower lift. <b class="ib-k-chg">Dark blue</b> is IceBrick's own charging plant at night. It is a separate, colder circuit, so the night has no pink. Scroll to zoom, drag across the chart to zoom into a span, shift-drag to pan, double-click to see the whole period, or use the range slider underneath.</p>
       <div class="el-controls">
-        <div class="el-group"><span class="gl">Load</span><div class="el-seg" id="ib-ev-load"><button data-v="today" aria-pressed="true">Today's IT</button><button data-v="new" aria-pressed="false">With the new IT</button></div></div>
+        <div class="el-group"><span class="gl">Load</span><div class="el-seg" id="ib-ev-load"><button data-v="today" aria-pressed="false">Today's IT</button><button data-v="new" aria-pressed="true">With the new IT</button></div></div>
         <div class="el-group"><span class="gl">Show</span><div class="el-seg" id="ib-ev-mode"><button data-v="kw" aria-pressed="true">Demand, kW</button><button data-v="pue" aria-pressed="false">PUE</button></div></div>
         <div class="el-group"><span class="gl">Range</span><div class="el-seg" id="ib-ev-range"><button data-v="peak">Peak ±5 days</button><button data-v="30">30D</button><button data-v="summer">Summer</button><button data-v="all">All</button></div></div>
       </div>
@@ -532,7 +535,7 @@ dash.calc('site_stats', {
   const fmtInt = d3.format(',.0f'), fmt1 = d3.format(',.1f'), fmtPct = d3.format('.1%');
   const parseT = (s) => Date.parse(String(s).replace(' ', 'T') + ':00Z');
   const dFmt = d3.utcFormat('%b %-d, %Y');
-  const S = { mode: 'stack', metric: 'avg', res: 'auto', sel: null, showTotal: false, win: null, sort: { k: 'energy_mwh', dir: -1 }, colors: {}, ambDry: true, ambWet: false, unit: 'F', ambColor: { dry: null, wet: null } };
+  const S = { mode: 'stack', metric: 'avg', res: 'auto', sel: null, showTotal: false, win: null, sort: { k: 'energy_mwh', dir: -1 }, colors: {}, ambDry: true, ambWet: false, unit: 'F', ambColor: { dry: '#f2cf4a', wet: null } };
   let P = null, P_src = null;
   let main = null, ctx = null, syncing = false, raf = 0;
 
@@ -893,7 +896,7 @@ dash.calc('site_stats', {
         main.yRG.call(ax).attr('font-size', null).attr('font-family', null); main.yRG.select('.domain').remove();
         for (const [k, A] of ambOn) {
           plot.append('path').datum(rows).attr('d', d3.line().defined((d) => !isNaN(A[d.b])).x(xm).y((d) => yR(tConv(A[d.b]))))
-            .style('fill', 'none').style('stroke', ambColor(k)).style('stroke-width', 1.6).style('stroke-linejoin', 'round').style('opacity', 0.95);
+            .style('fill', 'none').style('stroke', ambColor(k)).style('stroke-width', 1.6).style('stroke-linejoin', 'round').style('opacity', (k === 'dry' ? 0.5 : 0.95));
         }
       }
     }
@@ -1524,12 +1527,12 @@ window.IB_ERA5={"yearsTo":2025,"source":"Open-Meteo ERA5 reanalysis, Northern Vi
   const sdFmt = d3.utcFormat('%a %b %-d'), mdFmt = d3.utcFormat('%b %-d');
   const tonh = kWh => kWh / TK, rt = kW => kW / TK, mwh = kWh => kWh / 1000;
   const NWC = { it: 'var(--s3)', anc: 'var(--s5)', cool: 'var(--s4)' };
-  const COL = { before: 'var(--ib-fac)', after: 'var(--color-fg)', dis: 'var(--ib-dis)', eff: 'var(--ib-eff)', chg: 'var(--ib-chg)', amb: 'var(--s8)', ref: 'var(--cds-chart-reference)', it: 'var(--s3)', cut: 'var(--s2)' };
+  const COL = { before: 'var(--ib-fac)', after: 'var(--color-fg)', dis: 'var(--ib-dis)', eff: 'var(--ib-eff)', chg: 'var(--ib-chg)', amb: 'var(--ib-amb)', ref: 'var(--cds-chart-reference)', it: 'var(--s3)', cut: 'var(--s2)' };
 
   const RAW = JSON.parse(document.getElementById('meter-data').textContent);
   let P, F, Dc, sg, cur, R, W = null;
   const DEF_O = Object.assign({}, E.DEF);
-  const ST = { load: 'today', per: 'post', bxRange: 'hw', S: 0, CAP: 0, DR: 0, user: false, mode: 'kw', range: 'peak', ddN: 20, cySet: 'crit', cyView: 'fac', cySel: null, o: Object.assign({}, DEF_O) };
+  const ST = { load: 'new', per: 'all', bxRange: 'hw', S: 0, CAP: 0, DR: 0, user: false, mode: 'kw', range: 'peak', ddN: 20, cySet: 'crit', cyView: 'fac', cySel: null, o: Object.assign({}, DEF_O) };
   const status = (t, busy) => { const s = $('ib-status'); s.textContent = t; s.classList.toggle('busy', !!busy); };
 
   // ---------- periods ----------
@@ -2232,7 +2235,7 @@ window.IB_ERA5={"yearsTo":2025,"source":"Open-Meteo ERA5 reanalysis, Northern Vi
   function paintMethod() {
     const o = ST.o;
     $('ib-method').innerHTML = [
-      `<b>Which hours set the ceiling.</b> One meter (about 1 MW) reads zero from Sep 4, 2025, so the site total steps down by that much and stays there. The default period starts on that date: its power ceiling, every cycle and every saving come only from the data after the loss. The full record and the year before the loss stay available as periods for comparison.`,
+      `<b>Which hours set the ceiling.</b> One meter (about 1 MW) reads zero from Sep 4, 2025, so the site total steps down by that much and stays there. The period "After the meter loss" starts on that date: its power ceiling, every cycle and every saving come only from the data after the loss. The page opens on the full record, whose ceiling is set by Aug 17, 2025, before the loss.`,
       `<b>Separate the chillers out of the meter.</b> Hourly site demand is fitted as a weekly level (IT growth, meter changes) plus an hour-of-day pattern plus a smooth, rising function of dry-bulb temperature. Only the temperature part is treated as chiller work IceBrick can move. The daily pattern the weather does not explain stays where it is, which keeps the result on the conservative side. ${P.flagged} glitch hours and ${P.tfMiss} hours without weather were filled in.`,
       `<b>Turn it into tons.</b> IT (Information Technology) load is the weekly non-chiller level divided by 1 + ${fI(o.oh * 100)}% overhead, unless you enter it. All IT heat lands on the chilled water (CHW). The plant's floor below 20 °F comes from the YORK YVFA0309 datasheet curve used in the 8760 simulator, at a ${f1(o.chwsF)} °F supply. That gives the plant's kW per ton in every measured hour.`,
       `<b>Cycles, as in the 8760 simulator.</b> A cycle runs ${hFmt(o.chS)} to ${hFmt(o.chS)}: the night's charge window, then the day. Pass 1 asks each cycle for the flattest level it could hold on one night of ice. Pass 2 holds every cycle to one ceiling and asks for nothing beyond it. Any hour that would breach the ceiling is discharged just enough to meet it. The night banks exactly that discharge ×${o.loss}, filled into the lowest valleys first, up to one level under the ceiling (the night fill level).`,
@@ -2289,7 +2292,7 @@ window.IB_ERA5={"yearsTo":2025,"source":"Open-Meteo ERA5 reanalysis, Northern Vi
     const nP = cyclePanels().length, g = id => $(id) && $(id).querySelector('svg');
     const out = { curve: await svgPng(g('ib-cur-box'), 2), event: await svgPng(g('ib-ev-box'), 2), amb: await svgPng(g('ib-amb-box'), 2), dd: await svgPng(g('ib-dd-box'), 2), cal: await svgPng(g('ib-cal-box'), 2), bx: await svgPng(g('ib-bx-box'), 2), panels: [] };
     for (let i = 0; i < nP; i++) out.panels.push({ box: await svgPng(g(`ib-cp${i}-box`), 2), th: await svgPng(g(`ib-cp${i}-th`), 2), soc: await svgPng(g(`ib-cp${i}-soc`), 2) });
-    out.col = { before: cssv('--ib-fac'), after: cssv('--color-fg'), dis: cssv('--ib-dis'), eff: cssv('--ib-eff'), chg: cssv('--ib-chg'), amb: cssv('--s8'), cut: cssv('--s2'), it: cssv('--s3'), ref: cssv('--cds-chart-reference') };
+    out.col = { before: cssv('--ib-fac'), after: cssv('--color-fg'), dis: cssv('--ib-dis'), eff: cssv('--ib-eff'), chg: cssv('--ib-chg'), amb: cssv('--ib-amb'), cut: cssv('--s2'), it: cssv('--s3'), ref: cssv('--cds-chart-reference') };
     if (prevTheme == null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prevTheme);
     host.style.width = prevW; host.style.maxWidth = '';
     paintAll(false); if (prevDom) setWindow(prevDom, 'none');
